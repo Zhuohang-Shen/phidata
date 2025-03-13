@@ -101,61 +101,60 @@ class DuckDbAgent(Agent):
 
     def get_default_instructions(self) -> List[str]:
         instructions = []
-
+    
         # Add instructions from the Model
-        if self.model is not None:
-            _model_instructions = self.model.get_instructions_for_model()
-            if _model_instructions is not None:
-                instructions += _model_instructions
-
-        instructions += [
+        if self.model:
+            model_instructions = self.model.get_instructions_for_model()
+            if model_instructions:
+                instructions.extend(model_instructions)
+    
+        instructions.extend([
             "Determine if you can answer the question directly or if you need to run a query to accomplish the task.",
             "If you need to run a query, **FIRST THINK** about how you will accomplish the task and then write the query.",
-        ]
-
-        if self.semantic_model is not None:
-            instructions += [
-                "Using the `semantic_model` below, find which tables and columns you need to accomplish the task.",
-            ]
-
-        if self.search_knowledge and self.knowledge is not None:
-            instructions += [
-                "You have access to tools to search the `knowledge_base` for information.",
-            ]
-            if self.semantic_model is None:
-                instructions += [
+        ])
+    
+        if self.semantic_model:
+            instructions.append(
+                "Using the `semantic_model` below, find which tables and columns you need to accomplish the task."
+            )
+    
+        if self.search_knowledge and self.knowledge:
+            instructions.append(
+                "You have access to tools to search the `knowledge_base` for information."
+            )
+            if not self.semantic_model:
+                instructions.extend([
                     "Search the `knowledge_base` for `tables` to get the tables you have access to.",
-                ]
-                instructions += [
                     "If needed, search the `knowledge_base` for {table_name} to get information about that table.",
-                ]
+                ])
             if self.update_knowledge:
-                instructions += [
+                instructions.extend([
                     "If needed, search the `knowledge_base` for results of previous queries.",
                     "If you find any information that is missing from the `knowledge_base`, add it using the `add_to_knowledge_base` function.",
-                ]
-
-        instructions += [
+                ])
+    
+        instructions.extend([
             "If you need to run a query, run `show_tables` to check the tables you need exist.",
             "If the tables do not exist, RUN `create_table_from_path` to create the table using the path from the `semantic_model` or the `knowledge_base`.",
             "Once you have the tables and columns, create one single syntactically correct DuckDB query.",
-        ]
-        if self.semantic_model is not None:
-            instructions += [
+        ])
+    
+        if self.semantic_model:
+            instructions.extend([
                 "If you need to join tables, check the `semantic_model` for the relationships between the tables.",
                 "If the `semantic_model` contains a relationship between tables, use that relationship to join the tables even if the column names are different.",
-            ]
-        elif self.knowledge is not None:
-            instructions += [
+            ])
+        elif self.knowledge:
+            instructions.extend([
                 "If you need to join tables, search the `knowledge_base` for `relationships` to get the relationships between the tables.",
                 "If the `knowledge_base` contains a relationship between tables, use that relationship to join the tables even if the column names are different.",
-            ]
+            ])
         else:
-            instructions += [
-                "Use 'describe_table' to inspect the tables and only join on columns that have the same name and data type.",
-            ]
-
-        instructions += [
+            instructions.append(
+                "Use 'describe_table' to inspect the tables and only join on columns that have the same name and data type."
+            )
+    
+        instructions.extend([
             "Inspect the query using `inspect_query` to confirm it is correct.",
             "If the query is valid, RUN the query using the `run_query` function",
             "Analyse the results and return the answer to the user.",
@@ -164,12 +163,12 @@ class DuckDbAgent(Agent):
             + " Tell the user the file name.",
             "Continue till you have accomplished the task.",
             "Show the user the SQL you ran",
-        ]
-
+        ])
+    
         # Add instructions for using markdown
-        if self.markdown and self.response_model is None:
+        if self.markdown and not self.response_model:
             instructions.append("Use markdown to format your answers.")
-
+    
         return instructions
 
     def get_system_message(self) -> Optional[Message]:
